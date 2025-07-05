@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Photos</title>
+    <link rel="stylesheet" href="/static/css.min.css">
+</head>
+
+<body>
+
+    <h1>Upload Photos</h1>
+    <p>Upload selfies, memes, or any fun pictures here.</p>
+
+    <div class="tabs">
+        <a href="#">Upload</a>
+        <a href="/images/">Images</a>
+    </div>
+
+    <div class="upload-box" id="drop-area">
+        <img src="/static/upload.png" alt="Upload Icon" width="30" />
+        <p>Select a file or drag and drop here</p>
+        <small>Only support .jpg, .png and .gif.<br>Maximum file size is 5MB</small>
+        <input type="file" id="fileElem" multiple accept=".jpg,.jpeg,.png,.gif" style="display:none">
+    </div>
+
+    <button class="btn-upload" onclick="document.getElementById('fileElem').click()">BROWSE YOUR FILE</button>
+
+    <div class="current-upload" id="current-upload">
+        <label for="upload-url">Current Upload</label>
+        <div class="input-group">
+            <input type="text" id="upload-url" placeholder="https://" readonly />
+            <button onclick="copyToClipboard()">COPY</button>
+        </div>
+    </div>
+
+    <div id="uploaded-images">
+        
+    </div>
+
+<script src="/static/js.js"></script>
+</body>
+
+</html>
