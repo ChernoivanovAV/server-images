@@ -1,18 +1,30 @@
-import os
 import logging
-from datetime import datetime
+import os
+import uuid
+
+import aiofiles
+import psycopg2
+from PIL import Image
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-from PIL import Image
-import aiofiles
-import uuid
+
+load_dotenv()
+
+DB_CONFIG = {
+    "dbname": os.getenv('POSTGRES_DB'),
+    "user": os.getenv('POSTGRES_USER'),
+    "password": os.getenv('POSTGRES_PASSWORD'),
+    "host": os.getenv('POSTGRES_HOST'),
+    "port": 5432,
+}
 
 app = FastAPI()
 
 UPLOAD_DIR = "images"
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif"}
-LOG_FILE = "/app/logs/app.log"
+LOG_FILE = "./logs/app.log"
 
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -26,23 +38,20 @@ logging.basicConfig(
 )
 
 
-def allowed_file_extension(filename: str) -> bool:
-    ext = os.path.splitext(filename)[1].lower()
-    return ext in ALLOWED_EXTENSIONS
-
-
 async def validate_image(file: UploadFile):
     logging.info(f"Проверка файла: {file.filename}")
+    file_type = os.path.splitext(file.filename)[1].lower()
 
     # Проверяем расширение
-    if not allowed_file_extension(file.filename):
+    if file_type not in ALLOWED_EXTENSIONS:
         msg = f"Недопустимый формат файла: {file.filename}"
         logging.info(msg)
         raise HTTPException(status_code=400, detail="Недопустимый формат файла. Разрешены только .jpg, .png, .gif")
 
     # Проверяем размер
     contents = await file.read()
-    if len(contents) > MAX_FILE_SIZE:
+    file_size = len(contents)
+    if file_size > MAX_FILE_SIZE:
         msg = f"Файл слишком большой: {file.filename} ({len(contents)} байт)"
         logging.info(msg)
         raise HTTPException(status_code=400, detail="Файл слишком большой. Максимум 5 МБ")
@@ -59,20 +68,17 @@ async def validate_image(file: UploadFile):
         file.file.seek(0)  # сбрасываем указатель, чтобы можно было читать файл заново
 
     logging.info(f"Файл прошел проверку: {file.filename}")
-    return contents
+    return contents, file_size, file_type
 
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     logging.info(f"Начинаем загрузку файла: {file.filename}")
 
-    contents = await validate_image(file)
-
-    # Получаем расширение оригинального файла
-    ext = os.path.splitext(file.filename)[1].lower()
+    contents, file_size, file_type = await validate_image(file)
 
     # Генерируем уникальное имя с тем же расширением
-    unique_filename = f"{uuid.uuid4().hex}{ext}"
+    unique_filename = f"{uuid.uuid4().hex}{file_type}"
 
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
@@ -82,6 +88,22 @@ async def upload(file: UploadFile = File(...)):
 
     url = f"/images/{unique_filename}"
 
-    logging.info(f"Файл успешно загружен: {file.filename} сохранён как {unique_filename} URL: {url}")
+    logging.info(
+        f"Файл успешно загружен: {file.filename} сохранён как {unique_filename} URL: {url}"
+    )
+
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor as cur:        
+                cur.execute(
+                    """
+                    INSERT INTO images (filename, original_name, size, file_type)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (unique_filename, file.filename, file_size, file_type)
+                )
+                conn.commit()                
+    except Exception as e:
+        logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
 
     return JSONResponse(content={"url": url})

@@ -8,8 +8,10 @@ services:
     container_name: server_images_backend
     expose:
       - 8000
+    depends_on:
+      - db
     networks:
-      - app-net
+      app-net:
 
   nginx:
     image: nginx:stable
@@ -35,6 +37,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db_init:/docker-entrypoint-initdb.d
     networks:
       app-net:
     ports:
@@ -42,7 +45,7 @@ services:
 
 networks:
   app-net:
-  
+
 volumes:
   pgdata:
 
