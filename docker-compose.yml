@@ -26,5 +26,23 @@ services:
       - app
     networks:
       app-net:
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      app-net:
+    ports:
+      - 5433:5432
+
 networks:
   app-net:
+  
+volumes:
+  pgdata:
+
