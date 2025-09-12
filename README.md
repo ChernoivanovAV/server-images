@@ -30,7 +30,7 @@
 ```
 2. Соберите и запустите контейнеры: 
 ```bash
-    docker-compose up --build
+    docker compose up --build
 ```
 
 3. Откройте в браузере:
