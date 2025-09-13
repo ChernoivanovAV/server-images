@@ -117,47 +117,49 @@ p {
 }
 
 #uploaded-images {
-  max-width: 600px; /* можно подстроить под контейнер */
-  font-family: Arial, sans-serif;
+    max-width: 600px;
+    /* можно подстроить под контейнер */
+    font-family: Arial, sans-serif;
 }
 
 #uploaded-images label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
 }
 
 .preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .preview input[type="text"] {
-  flex: 1; /* занимает всё доступное место */
-  padding: 6px 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  user-select: all;
-  background-color: #f9f9f9;
+    flex: 1;
+    /* занимает всё доступное место */
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    user-select: all;
+    background-color: #f9f9f9;
 }
 
 .preview button {
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid #007bff;
-  background-color: #007bff;
-  color: white;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #007bff;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    transition: background-color 0.2s;
 }
 
 .preview button.remove {
-  border: 1px solid #ff0062;
-  background-color: #e70606;
+    border: 1px solid #ff0062;
+    background-color: #e70606;
 }
 
 .preview button.remove:hover {
@@ -165,14 +167,67 @@ p {
 }
 
 .preview button:hover {
-  background-color: #0056b3;
+    background-color: #0056b3;
 }
 
 .preview img {
-  width: 80px;     /* ширина превью */
-  height: 60px;    /* высота превью */
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    width: 80px;
+    /* ширина превью */
+    height: 60px;
+    /* высота превью */
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    font-family: sans-serif;
+}
+
+.page-link {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.page-link:hover {
+    background: #f2f2f2;
+}
+
+.page-current {
+    align-self: center;
+    font-weight: bold;
+}
+
+.file-list {
+    width: 80%;
+    border-collapse: collapse;
+}
+
+.file-list th,
+.file-list td {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.file-list tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.file-list tbody tr:nth-child(odd) {
+    background-color: #fff;
+}
+
+.file-list tbody tr:hover {
+    background-color: #e6f2ff;
 }

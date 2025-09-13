@@ -16,7 +16,7 @@
 
 <div class="tabs">
     <a href="/">Upload</a>
-    <a class="active" href="/images-list/">Images</a>
+    <a class="active" href="/images-list/1">Images</a>
 </div>
 
 <div id="uploaded-images">
@@ -24,7 +24,7 @@
 </div>
 
 <h2>Список файлов</h2>
-<table>
+<table class="file-list">
     <thead>
     <tr>
         <th>Имя файла</th>
@@ -50,6 +50,20 @@
     {% endfor %}
 
 </table>
+
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="/images-list/{{ page - 1 }}" class="page-link">« Назад</a>
+    {% endif %}
+
+    <span class="page-current">Стр. {{ page }} / {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+        <a href="/images-list/{{ page + 1 }}" class="page-link">Вперёд »</a>
+    {% endif %}
+</div>
+
+
 
 </body>
 

@@ -23,6 +23,8 @@ DB_CONFIG = {
     'cursor_factory': RealDictCursor
 }
 
+PAGE_SIZE = 5
+
 app = FastAPI()
 templates = Jinja2Templates(directory='templates')
 
@@ -41,6 +43,36 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+
+def test_connection():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        conn.close()
+        logging.info("Соединенение с базой данных успешно")
+    except Exception as e:
+        logging.error(f"Ошибка подключения к базе данных: {e}", exc_info=True)
+        raise
+
+
+test_connection()
+
+
+def save_metadata(filename, original_name, size, file_type):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                query = """
+                INSERT INTO images (filename, original_name, size, file_type)
+                VALUES (%s, %s, %s, %s)
+                """
+                cur.execute(query, (filename, original_name, size, file_type))
+                conn.commit()
+        logging.info(f"Метаданные успешно сохранены для файла {filename}")
+        return True
+    except Exception as e:
+        logging.error(f"Ошибка сохранения метаданных: {e}", exc_info=True)
+        return False
 
 
 async def validate_image(file: UploadFile):
@@ -84,12 +116,20 @@ async def upload(file: UploadFile = File(...)):
 
     # Генерируем уникальное имя с тем же расширением
     unique_filename = f"{uuid.uuid4().hex}{file_type}"
-
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
-    # Асинхронно записываем файл
-    async with aiofiles.open(file_path, "wb") as out_file:
-        await out_file.write(contents)
+    # Сначала пробуем сохранить метаданные
+    if not save_metadata(unique_filename, file.filename, file_size // 1024, file_type.strip(".")):
+        logging.error(f"Файл {file.filename} не сохранён - ошибка при записи метаданных")
+        raise HTTPException(status_code=500, detail="Не удалось сохранить метаданные. Файл не сохранён.")
+
+    # Если метаданные записаны - сохраняем файл
+    try:
+        async with aiofiles.open(file_path, "wb") as out_file:
+            await out_file.write(contents)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения файла {unique_filename}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при сохранении файла")
 
     url = f"/images/{unique_filename}"
 
@@ -97,29 +137,31 @@ async def upload(file: UploadFile = File(...)):
         f"Файл успешно загружен: {file.filename} сохранён как {unique_filename} URL: {url}"
     )
 
-    try:
-        with psycopg2.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO images (filename, original_name, size, file_type)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (unique_filename, file.filename, file_size // 1024, file_type.strip("."))
-                )
-                conn.commit()
-    except Exception as e:
-        logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
-
     return JSONResponse(content={"url": url})
 
 
-@app.get("/images-list/", response_class=HTMLResponse)
-async def images_list(request: Request):
+@app.get("/images-list/{page}", response_class=HTMLResponse)
+async def images_list(request: Request, page: int):
+    if page < 1:
+        page = 1
+
+    total_pages = 0
+    offset = (page - 1) * PAGE_SIZE
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM images")
+                cur.execute("SELECT COUNT(*) FROM images")
+                total_images = (cur.fetchone()).get("count")
+                total_pages = (total_images + PAGE_SIZE - 1) // PAGE_SIZE
+
+                print("~~~~~~~~~~~~~~~")
+                print(f'total_images:{total_images}')
+                print(f'offset:{offset}')
+                print(f'page:{page}')
+                print(f'total_pages:{total_pages}')
+                print("~~~~~~~~~~~~~~~")
+
+                cur.execute("SELECT * FROM images ORDER BY upload_time LIMIT %s OFFSET %s", (PAGE_SIZE, offset))
                 files: List[Dict[str, Any]] = cur.fetchall()
                 print(files)
 
@@ -127,7 +169,9 @@ async def images_list(request: Request):
         logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
 
-    return templates.TemplateResponse("images-list.html", {"request": request, "files": files})
+    return templates.TemplateResponse("images-list.html", {
+        "request": request, "files": files, 'total_pages': total_pages, 'page': page,
+    })
 
 
 @app.get("/delete/{id}")
@@ -152,6 +196,6 @@ async def delete_image(id: int, response: Response):
         logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
 
-    response.headers["Location"] = "/images-list/"
+    response.headers["Location"] = "/images-list/1"
     response.status_code = 302
     return {"message": "Redirected"}
