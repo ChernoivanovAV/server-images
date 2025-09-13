@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Upload Photos</title>
+    <link rel="stylesheet" href="/static/css.min.css">
+    <link rel="icon" href="data:,">
+</head>
+
+<body>
+
+<h1>Upload Photos</h1>
+<p>Upload selfies, memes, or any fun pictures here.</p>
+
+<div class="tabs">
+    <a href="/">Upload</a>
+    <a class="active" href="/images-list/">Images</a>
+</div>
+
+<div id="uploaded-images">
+
+</div>
+
+<h2>Список файлов</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Имя файла</th>
+        <th>Оригинальное имя</th>
+        <th>Размер (КБ)</th>
+        <th>Дата загрузки</th>
+        <th>Тип файла</th>
+        <th></th>
+    </tr>
+    </thead>
+    {% for file in files %}
+    <tr>
+        <td>{{ file.filename }}</td>
+        <td>{{ file.original_name }}</td>
+        <td>{{ file.size }}</td>
+        <td>{{ file.upload_date }}</td>
+        <td>{{ file.file_type }}</td>
+        <td class="preview">
+            <button onclick="location.href='/delete/{{ file.id }}'" class="remove">Удалить</button>
+            <img src="/images/{{ file.filename }}" alt="Просморт">
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+</body>
+
+</html>

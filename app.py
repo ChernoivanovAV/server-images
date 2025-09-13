@@ -1,13 +1,16 @@
 import logging
 import os
 import uuid
+from typing import List, Dict, Any
 
 import aiofiles
 import psycopg2
 from PIL import Image
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Response
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from psycopg2.extras import RealDictCursor
 
 load_dotenv()
 
@@ -17,9 +20,11 @@ DB_CONFIG = {
     "password": os.getenv('POSTGRES_PASSWORD'),
     "host": os.getenv('POSTGRES_HOST'),
     "port": 5432,
+    'cursor_factory': RealDictCursor
 }
 
 app = FastAPI()
+templates = Jinja2Templates(directory='templates')
 
 UPLOAD_DIR = "images"
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
@@ -94,16 +99,59 @@ async def upload(file: UploadFile = File(...)):
 
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
-            with conn.cursor as cur:        
+            with conn.cursor() as cur:
                 cur.execute(
                     """
                     INSERT INTO images (filename, original_name, size, file_type)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (unique_filename, file.filename, file_size, file_type)
+                    (unique_filename, file.filename, file_size // 1024, file_type.strip("."))
                 )
-                conn.commit()                
+                conn.commit()
     except Exception as e:
         logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
 
     return JSONResponse(content={"url": url})
+
+
+@app.get("/images-list/", response_class=HTMLResponse)
+async def images_list(request: Request):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM images")
+                files: List[Dict[str, Any]] = cur.fetchall()
+                print(files)
+
+    except Exception as e:
+        logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
+
+    return templates.TemplateResponse("images-list.html", {"request": request, "files": files})
+
+
+@app.get("/delete/{id}")
+async def delete_image(id: int, response: Response):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM images WHERE id=%s RETURNING filename", (id,))
+                file: Dict[str, Any] = cur.fetchone()
+                if file is None:
+                    print("Запись c id не найдена")
+                else:
+                    try:
+                        file_path = os.path.join(UPLOAD_DIR, file.get('filename'))
+                        print(file_path)
+                        os.remove(file_path)
+                    except FileNotFoundError:
+                        pass
+
+                    conn.commit()
+    except Exception as e:
+        logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
+
+    response.headers["Location"] = "/images-list/"
+    response.status_code = 302
+    return {"message": "Redirected"}

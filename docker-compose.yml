@@ -5,6 +5,7 @@ services:
       - ./app.py:/app/app.py
       - ./logs:/app/logs
       - ./images:/app/images
+      - ./templates:/app/templates
     container_name: server_images_backend
     expose:
       - 8000
