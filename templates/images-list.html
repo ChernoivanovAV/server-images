@@ -16,7 +16,7 @@
 
 <div class="tabs">
     <a href="/">Upload</a>
-    <a class="active" href="/images-list/1">Images</a>
+    <a class="active" href="/images-list/">Images</a>
 </div>
 
 <div id="uploaded-images">
@@ -30,39 +30,55 @@
         <th>Имя файла</th>
         <th>Оригинальное имя</th>
         <th>Размер (КБ)</th>
-        <th>Дата загрузки</th>
+        {% set new_order = 'ASC' if order == 'DESC' else 'DESC' %}
+        <th class="sorted-{{ order }}">
+            <a href="/images-list/?page={{ page }}&order={{ new_order }}"><span class="sort-icon"></span></a> Дата
+            загрузки
+        </th>
         <th>Тип файла</th>
         <th></th>
     </tr>
     </thead>
+    {% if files %}
     {% for file in files %}
     <tr>
-        <td>{{ file.filename }}</td>
+        <td class="preview">
+            <a href="/images/{{ file.filename }}">
+                <img src="/images/{{ file.filename }}" alt="Просморт">
+            </a>
+            {{ file.filename }}
+        </td>
         <td>{{ file.original_name }}</td>
         <td>{{ file.size }}</td>
-        <td>{{ file.upload_date }}</td>
+        <td>{{ file.upload_time }}</td>
         <td>{{ file.file_type }}</td>
-        <td class="preview">
+        <td class="action">
             <button onclick="location.href='/delete/{{ file.id }}'" class="remove">Удалить</button>
-            <img src="/images/{{ file.filename }}" alt="Просморт">
+            <a href="/images/{{ file.filename }}" download="{{ file.filename }}">
+                <button>Скачать</button>
+            </a>
         </td>
     </tr>
     {% endfor %}
+    {% else %}
+    <tr>
+        <td colspan="6" style="text-align:center">Нет загруженных изображений</td>
+    </tr>
+    {% endif %}
 
 </table>
 
 <div class="pagination">
     {% if page > 1 %}
-        <a href="/images-list/{{ page - 1 }}" class="page-link">« Назад</a>
+    <a href="/images-list/?page={{ page - 1 }}&order={{ order }}" class="page-link">« Предыдущая страница</a>
     {% endif %}
 
     <span class="page-current">Стр. {{ page }} / {{ total_pages }}</span>
 
     {% if page < total_pages %}
-        <a href="/images-list/{{ page + 1 }}" class="page-link">Вперёд »</a>
+    <a href="/images-list/?page={{ page + 1 }}&order={{ order }}" class="page-link">Следующая страница »</a>
     {% endif %}
 </div>
-
 
 
 </body>

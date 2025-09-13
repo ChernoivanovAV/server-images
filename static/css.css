@@ -22,21 +22,43 @@ p {
 
 .tabs {
     display: flex;
-    gap: 10px;
+    gap: 15px;
     margin-bottom: 20px;
+    border-bottom: 2px solid #eee; /* легкая линия под вкладками */
 }
 
 .tabs a {
+    position: relative;
     text-decoration: none;
     font-weight: bold;
-    color: #ccc;
+    color: #666;
     font-size: 16px;
+    padding: 8px 0;
+    transition: color 0.3s;
+}
+
+.tabs a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 0%;
+    height: 2px;
+    background-color: #1473ff;
+    transition: width 0.3s;
+}
+
+.tabs a:hover {
+    color: #1473ff;
 }
 
 .tabs a.active {
     color: #1473ff;
 }
 
+.tabs a.active::after {
+    width: 100%;
+}
 .upload-box {
     border: 2px dashed #a3bffa;
     border-radius: 10px;
@@ -146,7 +168,7 @@ p {
     background-color: #f9f9f9;
 }
 
-.preview button {
+button {
     padding: 6px 12px;
     font-size: 14px;
     cursor: pointer;
@@ -157,13 +179,17 @@ p {
     transition: background-color 0.2s;
 }
 
-.preview button.remove {
+button.remove {
     border: 1px solid #ff0062;
     background-color: #e70606;
 }
 
-.preview button.remove:hover {
+button.remove:hover {
     background-color: #8a0000;
+}
+
+.action button {
+    width: 100%;
 }
 
 .preview button:hover {
@@ -230,4 +256,17 @@ p {
 
 .file-list tbody tr:hover {
     background-color: #e6f2ff;
+}
+
+.file-list th.sorted-ASC .sort-icon::after {
+    content: "▲";
+}
+
+.file-list th.sorted-DESC .sort-icon::after {
+    content: "▼";
+}
+
+.file-list th[class*=sorted] a {
+    text-decoration: none;
+    color: blue; 
 }

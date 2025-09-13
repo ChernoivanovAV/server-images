@@ -7,7 +7,7 @@ import aiofiles
 import psycopg2
 from PIL import Image
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Response
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Response, Query
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from psycopg2.extras import RealDictCursor
@@ -23,7 +23,7 @@ DB_CONFIG = {
     'cursor_factory': RealDictCursor
 }
 
-PAGE_SIZE = 5
+PAGE_SIZE = 10
 
 app = FastAPI()
 templates = Jinja2Templates(directory='templates')
@@ -140,13 +140,19 @@ async def upload(file: UploadFile = File(...)):
     return JSONResponse(content={"url": url})
 
 
-@app.get("/images-list/{page}", response_class=HTMLResponse)
-async def images_list(request: Request, page: int):
-    if page < 1:
-        page = 1
-
+@app.get("/images-list/", response_class=HTMLResponse)
+async def images_list(
+        request: Request,
+        page: int = Query(1, ge=1),
+        order: str = Query("DESC")
+):
     total_pages = 0
     offset = (page - 1) * PAGE_SIZE
+
+    order = order.upper()
+    if order not in ("ASC", "DESC"):
+        order = "DESC"
+
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -154,23 +160,29 @@ async def images_list(request: Request, page: int):
                 total_images = (cur.fetchone()).get("count")
                 total_pages = (total_images + PAGE_SIZE - 1) // PAGE_SIZE
 
-                print("~~~~~~~~~~~~~~~")
-                print(f'total_images:{total_images}')
-                print(f'offset:{offset}')
-                print(f'page:{page}')
-                print(f'total_pages:{total_pages}')
-                print("~~~~~~~~~~~~~~~")
+                # print("~~~~~~~~~~~~~~~")
+                # print(f'total_images:{total_images}')
+                # print(f'offset:{offset}')
+                # print(f'page:{page}')
+                # print(f'total_pages:{total_pages}')
+                # print("~~~~~~~~~~~~~~~")
 
-                cur.execute("SELECT * FROM images ORDER BY upload_time LIMIT %s OFFSET %s", (PAGE_SIZE, offset))
+                cur.execute(f"SELECT * FROM images ORDER BY upload_time {order} LIMIT %s OFFSET %s",
+                            (PAGE_SIZE, offset)
+                            )
                 files: List[Dict[str, Any]] = cur.fetchall()
-                print(files)
+                for file in files:
+                    upload_time = file.get('upload_time')
+                    file['upload_time'] = upload_time.strftime("%Y-%m-%d %H:%M:%S") if upload_time else None
+
+            print(files)
 
     except Exception as e:
         logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
 
     return templates.TemplateResponse("images-list.html", {
-        "request": request, "files": files, 'total_pages': total_pages, 'page': page,
+        "request": request, "files": files, 'total_pages': total_pages, 'page': page, 'order': order
     })
 
 
@@ -182,20 +194,22 @@ async def delete_image(id: int, response: Response):
                 cur.execute("DELETE FROM images WHERE id=%s RETURNING filename", (id,))
                 file: Dict[str, Any] = cur.fetchone()
                 if file is None:
-                    print("Запись c id не найдена")
+                    logging.warning("Запись с id=%s не найдена", id)
+                    raise HTTPException(status_code=404, detail=f"Изображение с id={id} не найдено")
                 else:
                     try:
                         file_path = os.path.join(UPLOAD_DIR, file.get('filename'))
-                        print(file_path)
                         os.remove(file_path)
+                        logging.info("Файл %s успешно удалён", file_path)
                     except FileNotFoundError:
-                        pass
+                        logging.warning("Файл %s не найден на диске", file_path)
 
                     conn.commit()
+                    logging.info("Запись с id=%s успешно удалена из БД", id)
     except Exception as e:
-        logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
+        logging.error("Ошибка при удалении изображения с id=%s: %s", id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
 
-    response.headers["Location"] = "/images-list/1"
+    response.headers["Location"] = "/images-list/"
     response.status_code = 302
     return {"message": "Redirected"}
