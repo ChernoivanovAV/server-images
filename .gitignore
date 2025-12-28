@@ -1,0 +1,7 @@
+.env
+.idea
+__pycache__
+images/
+logs/access.log
+logs/app.log
+logs/error.log

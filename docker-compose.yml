@@ -3,6 +3,9 @@ services:
     build: .
     volumes:
       - ./app.py:/app/app.py
+      - ./config.py:/app/config.py
+      - ./utils.py:/app/utils.py
+      - ./routers.py:/app/routers.py
       - ./logs:/app/logs
       - ./images:/app/images
       - ./templates:/app/templates
