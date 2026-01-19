@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from routers import router as main_router
 from utils import test_connection
-import uvicorn
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

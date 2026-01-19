@@ -79,6 +79,8 @@ async def images_list(
                     upload_time = file.get('upload_time')
                     file['upload_time'] = upload_time.strftime("%Y-%m-%d %H:%M:%S") if upload_time else None
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error("Ошибка при выполнении запроса: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")
@@ -108,6 +110,8 @@ async def delete_image(id: int, response: Response):
 
                     conn.commit()
                     logging.info("Запись с id=%s успешно удалена из БД", id)
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error("Ошибка при удалении изображения с id=%s: %s", id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при выполнении запроса")

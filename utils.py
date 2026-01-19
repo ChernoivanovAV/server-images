@@ -7,6 +7,7 @@ from fastapi import (
 from config import DB_CONFIG, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 import os
 from PIL import Image
+from io import BytesIO
 
 
 def test_connection() -> None:
@@ -44,7 +45,10 @@ async def validate_image(file: UploadFile):
     if file_type not in ALLOWED_EXTENSIONS:
         msg = f"Недопустимый формат файла: {file.filename}"
         logging.info(msg)
-        raise HTTPException(status_code=400, detail="Недопустимый формат файла. Разрешены только .jpg, .png, .gif")
+        raise HTTPException(
+            status_code=400,
+            detail="Недопустимый формат файла. Разрешены только .jpg, .jpeg, .png, .gif"
+        )
 
     # Проверяем размер
     contents = await file.read()
@@ -56,14 +60,14 @@ async def validate_image(file: UploadFile):
 
     # Проверяем, что файл - валидное изображение
     try:
-        img = Image.open(file.file)
-        img.verify()  # проверка целостности
+        img = Image.open(BytesIO(contents))
+        img.verify()
     except Exception:
         msg = f"Файл не является валидным изображением: {file.filename}"
         logging.info(msg)
         raise HTTPException(status_code=400, detail="Загруженный файл не является валидным изображением")
-    finally:
-        file.file.seek(0)  # сбрасываем указатель, чтобы можно было читать файл заново
+
+    file.file.seek(0)  # сбрасываем указатель, чтобы можно было читать файл заново
 
     logging.info(f"Файл прошел проверку: {file.filename}")
     return contents, file_size, file_type
